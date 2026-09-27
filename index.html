@@ -1,92 +1,11 @@
-<!DOCTYPE html>
-<html lang="fr">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<script type="module">
 
-  <title>Test Rando GPS</title>
+  import * as maplibregl from
+  "https://unpkg.com/maplibre-gl@6.11.2/dist/maplibre-gl.mjs";
 
-  <link
-    href="https://unpkg.com/maplibre-gl@6.11.2/dist/maplibre-gl.css"
-    rel="stylesheet"
-  >
+  document.getElementById("message").textContent =
+    "✅ MapLibre chargé";
 
-  <style>
-    html, body {
-      margin: 0;
-      width: 100%;
-      height: 100%;
-    }
-
-    #map {
-      width: 100%;
-      height: 100%;
-    }
-
-    #message {
-      position: absolute;
-      z-index: 10;
-      top: 10px;
-      left: 10px;
-      background: white;
-      padding: 12px;
-      border-radius: 8px;
-    }
-  </style>
-</head>
-
-<body>
-
-<div id="message">
-  Chargement de la carte...
-</div>
-
-<div id="map"></div>
-
-<script src="https://unpkg.com/maplibre-gl@6.11.2/dist/maplibre-gl.js"></script>
-
-<script>
-
-  const map = new maplibregl.Map({
-
-    container: "map",
-
-    style: {
-      version: 8,
-
-      sources: {
-        osm: {
-          type: "raster",
-          tiles: [
-            "https://tile.openstreetmap.org/{z}/{x}/{y}.png"
-          ],
-          tileSize: 256
-        }
-      },
-
-      layers: [
-        {
-          id: "osm",
-          type: "raster",
-          source: "osm"
-        }
-      ]
-    },
-
-    center: [0.5, 46.5],
-
-    zoom: 6
-
-  });
-
-  map.on("load", function() {
-
-    document.getElementById("message").textContent =
-      "✅ MapLibre fonctionne";
-
-  });
+  console.log("MapLibre :", maplibregl);
 
 </script>
-
-</body>
-</html>
