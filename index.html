@@ -1,6 +1,8 @@
 <!DOCTYPE html>
 <html lang="fr">
+
 <head>
+
     <meta charset="UTF-8">
 
     <meta name="viewport"
@@ -8,67 +10,276 @@
 
     <title>Rando GPS</title>
 
+    <!-- MapLibre -->
+    <link
+        rel="stylesheet"
+        href="https://unpkg.com/maplibre-gl@6.11.2/dist/maplibre-gl.css"
+    >
+
     <style>
+
+        html,
         body {
             margin: 0;
-            font-family: Arial, sans-serif;
-            background: #222;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+        }
+
+        #map {
+            width: 100%;
+            height: 100%;
+        }
+
+        /* Barre supérieure */
+
+        #topbar {
+
+            position: absolute;
+
+            top: 10px;
+            left: 10px;
+            right: 10px;
+
+            height: 50px;
+
+            background: rgba(0,0,0,0.75);
+
             color: white;
-            text-align: center;
+
+            display: flex;
+
+            align-items: center;
+
+            justify-content: center;
+
+            border-radius: 12px;
+
+            z-index: 10;
+
+            font-family: Arial, sans-serif;
+
+            font-size: 20px;
+
+            font-weight: bold;
+
+            box-shadow:
+                0 2px 8px rgba(0,0,0,0.4);
         }
 
-        header {
-            padding: 20px;
-            background: #111;
+        /* Bouton GPS */
+
+        #gpsButton {
+
+            position: absolute;
+
+            right: 15px;
+            bottom: 25px;
+
+            width: 55px;
+            height: 55px;
+
+            border: none;
+
+            border-radius: 50%;
+
+            background: white;
+
+            font-size: 25px;
+
+            box-shadow:
+                0 2px 8px rgba(0,0,0,0.4);
+
+            z-index: 10;
         }
 
-        main {
-            padding: 40px 20px;
-        }
-
-        h1 {
-            font-size: 28px;
-        }
-
-        .fonction {
-            margin: 15px auto;
-            padding: 15px;
-            max-width: 300px;
-            background: #333;
-            border-radius: 10px;
-        }
     </style>
+
 </head>
+
 
 <body>
 
-    <header>
-        <h1>🗺️ Rando GPS</h1>
-    </header>
+    <div id="map"></div>
 
-    <main>
+    <div id="topbar">
+        🗺️ Rando GPS
+    </div>
 
-        <div class="fonction">
-            🛰️ Carte satellite
-        </div>
+    <button id="gpsButton">
+        📍
+    </button>
 
-        <div class="fonction">
-            📂 Importer un tracé GPX
-        </div>
 
-        <div class="fonction">
-            📍 Ma position GPS
-        </div>
+    <!-- MapLibre -->
 
-        <div class="fonction">
-            📌 Points d'intérêt
-        </div>
+    <script type="module">
 
-        <div class="fonction">
-            👥 Participants : 0 / 30
-        </div>
+        import * as maplibregl
+            from "https://unpkg.com/maplibre-gl@6.11.2/dist/maplibre-gl.mjs";
 
-    </main>
+
+        /*
+         * Création de la carte
+         */
+
+        const map = new maplibregl.Map({
+
+            container: "map",
+
+            center: [2.5, 46.8],
+
+            zoom: 5,
+
+            style: {
+
+                version: 8,
+
+                sources: {
+
+                    satellite: {
+
+                        type: "raster",
+
+                        tiles: [
+
+                            "https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless-2020_3857/default/g/{z}/{y}/{x}.jpg"
+
+                        ],
+
+                        tileSize: 256
+
+                    }
+
+                },
+
+                layers: [
+
+                    {
+
+                        id: "satellite",
+
+                        type: "raster",
+
+                        source: "satellite"
+
+                    }
+
+                ]
+
+            }
+
+        });
+
+
+        /*
+         * Contrôles de navigation
+         */
+
+        map.addControl(
+
+            new maplibregl.NavigationControl(),
+
+            "top-right"
+
+        );
+
+
+        /*
+         * Bouton GPS
+         */
+
+        const gpsButton =
+            document.getElementById("gpsButton");
+
+
+        gpsButton.addEventListener(
+            "click",
+            () => {
+
+                if (!navigator.geolocation) {
+
+                    alert(
+                        "La géolocalisation n'est pas disponible."
+                    );
+
+                    return;
+
+                }
+
+
+                navigator.geolocation.getCurrentPosition(
+
+                    (position) => {
+
+                        const longitude =
+                            position.coords.longitude;
+
+                        const latitude =
+                            position.coords.latitude;
+
+
+                        /*
+                         * Position actuelle
+                         */
+
+                        new maplibregl.Marker({
+                            color: "#e53935"
+                        })
+
+                        .setLngLat([
+                            longitude,
+                            latitude
+                        ])
+
+                        .addTo(map);
+
+
+                        /*
+                         * Centrer la carte
+                         */
+
+                        map.flyTo({
+
+                            center: [
+                                longitude,
+                                latitude
+                            ],
+
+                            zoom: 15
+
+                        });
+
+                    },
+
+
+                    () => {
+
+                        alert(
+                            "Impossible d'obtenir votre position GPS."
+                        );
+
+                    },
+
+                    {
+
+                        enableHighAccuracy: true,
+
+                        timeout: 10000,
+
+                        maximumAge: 5000
+
+                    }
+
+                );
+
+            }
+
+        );
+
+    </script>
 
 </body>
+
 </html>
