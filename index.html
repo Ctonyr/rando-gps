@@ -260,23 +260,248 @@
 
 
     // ==============================
-    // IMPORT GPX
-    // ==============================
+// IMPORT GPX
+// ==============================
 
-    document
-      .getElementById("gpxFile")
-      .addEventListener("change", () => {
+document
+  .getElementById("gpxFile")
+  .addEventListener("change", async (event) => {
 
-        alert(
-          "Import GPX : prochaine étape"
+    const file = event.target.files[0];
+
+    if (!file) return;
+
+    try {
+
+      // Lecture du fichier
+      const text = await file.text();
+
+      // Analyse du XML
+      const parser = new DOMParser();
+
+      const xml = parser.parseFromString(
+        text,
+        "application/xml"
+      );
+
+      // Vérification
+      if (xml.querySelector("parsererror")) {
+        throw new Error("GPX invalide");
+      }
+
+
+      // ==========================================
+      // RÉCUPÉRATION DE LA TRACE
+      // ==========================================
+
+      const trackPoints =
+        Array.from(xml.getElementsByTagName("trkpt"));
+
+      const coordinates = trackPoints
+        .map(point => {
+
+          const lat =
+            parseFloat(point.getAttribute("lat"));
+
+          const lon =
+            parseFloat(point.getAttribute("lon"));
+
+          return [lon, lat];
+
+        })
+        .filter(point =>
+          Number.isFinite(point[0]) &&
+          Number.isFinite(point[1])
         );
+
+
+      if (coordinates.length < 2) {
+
+        throw new Error(
+          "Aucune trace GPS trouvée dans ce GPX."
+        );
+
+      }
+
+
+      // ==========================================
+      // SUPPRESSION DE L'ANCIENNE TRACE
+      // ==========================================
+
+      if (map.getLayer("gpx-line")) {
+        map.removeLayer("gpx-line");
+      }
+
+      if (map.getSource("gpx")) {
+        map.removeSource("gpx");
+      }
+
+
+      // ==========================================
+      // AJOUT DE LA TRACE
+      // ==========================================
+
+      map.addSource("gpx", {
+
+        type: "geojson",
+
+        data: {
+
+          type: "Feature",
+
+          properties: {},
+
+          geometry: {
+
+            type: "LineString",
+
+            coordinates: coordinates
+
+          }
+
+        }
 
       });
 
 
-  </script>
+      map.addLayer({
+
+        id: "gpx-line",
+
+        type: "line",
+
+        source: "gpx",
+
+        paint: {
+
+          "line-color": "#ff0000",
+
+          "line-width": 5,
+
+          "line-opacity": 0.9
+
+        }
+
+      });
 
 
-</body>
+      // ==========================================
+      // ZOOM AUTOMATIQUE SUR LA TRACE
+      // ==========================================
 
-</html>
+      const bounds =
+        new maplibregl.LngLatBounds();
+
+      coordinates.forEach(point => {
+
+        bounds.extend(point);
+
+      });
+
+
+      map.fitBounds(bounds, {
+
+        padding: 60,
+
+        duration: 1000
+
+      });
+
+
+      // ==========================================
+      // WAYPOINTS
+      // ==========================================
+
+      const waypoints =
+        Array.from(xml.getElementsByTagName("wpt"));
+
+
+      waypoints.forEach(wpt => {
+
+        const lat =
+          parseFloat(wpt.getAttribute("lat"));
+
+        const lon =
+          parseFloat(wpt.getAttribute("lon"));
+
+
+        if (
+          !Number.isFinite(lat) ||
+          !Number.isFinite(lon)
+        ) {
+          return;
+        }
+
+
+        // Nom du waypoint
+        const nameElement =
+          wpt.getElementsByTagName("name")[0];
+
+        const name =
+          nameElement
+            ? nameElement.textContent
+            : "Waypoint";
+
+
+        // Marqueur bleu
+        new maplibregl.Marker({
+          color: "#0066ff"
+        })
+
+          .setLngLat([
+            lon,
+            lat
+          ])
+
+          .setPopup(
+
+            new maplibregl.Popup({
+              offset: 25
+            })
+
+              .setText(name)
+
+          )
+
+          .addTo(map);
+
+      });
+
+
+      // ==========================================
+      // MESSAGE
+      // ==========================================
+
+      console.log(
+        "GPX chargé :",
+        coordinates.length,
+        "points"
+      );
+
+      console.log(
+        "Waypoints :",
+        waypoints.length
+      );
+
+
+      alert(
+        "GPX chargé !\n\n" +
+        coordinates.length +
+        " points de trace\n" +
+        waypoints.length +
+        " waypoint(s)"
+      );
+
+
+    } catch (error) {
+
+      console.error(error);
+
+      alert(
+        "❌ Impossible de lire ce fichier GPX.\n\n" +
+        error.message
+      );
+
+    }
+
+  });
