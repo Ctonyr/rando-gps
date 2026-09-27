@@ -1,10 +1,16 @@
 <!DOCTYPE html>
 <html lang="fr">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-  <title>Test carte</title>
+<head>
+
+  <meta charset="UTF-8">
+
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1"
+  >
+
+  <title>Rando GPS</title>
 
   <link
     rel="stylesheet"
@@ -12,43 +18,265 @@
   >
 
   <style>
-    html, body {
+
+    html,
+    body,
+    #map {
+      height: 100%;
       margin: 0;
       padding: 0;
-      width: 100%;
-      height: 100%;
     }
 
-    #map {
-      width: 100%;
-      height: 100%;
+    #menu {
+
+      position: absolute;
+
+      top: 10px;
+      left: 10px;
+
+      z-index: 10;
+
+      display: flex;
+      gap: 8px;
+
     }
+
+    button,
+    label {
+
+      background: white;
+
+      border: none;
+
+      border-radius: 8px;
+
+      padding: 10px 14px;
+
+      font-size: 15px;
+
+      box-shadow:
+        0 2px 6px rgba(0,0,0,0.25);
+
+      cursor: pointer;
+
+    }
+
+    input[type="file"] {
+      display: none;
+    }
+
   </style>
+
 </head>
+
 
 <body>
 
+
+  <div id="menu">
+
+    <button id="gpsBtn">
+      📍 Ma position
+    </button>
+
+    <label for="gpxFile">
+      📂 Importer GPX
+    </label>
+
+    <input
+      type="file"
+      id="gpxFile"
+      accept=".gpx"
+    >
+
+  </div>
+
+
   <div id="map"></div>
+
 
   <script type="module">
 
     import * as maplibregl from
       "https://unpkg.com/maplibre-gl@6.11.2/dist/maplibre-gl.mjs";
 
+
+    // ==============================
+    // CARTE SATELLITE
+    // ==============================
+
     const map = new maplibregl.Map({
 
       container: "map",
 
-      style:
-        "https://demotiles.maplibre.org/style.json",
+      zoom: 6,
 
-      center: [0, 46],
+      center: [
+        0.5,
+        46.5
+      ],
 
-      zoom: 5
+      style: {
+
+        version: 8,
+
+        sources: {
+
+          satellite: {
+
+            type: "raster",
+
+            tiles: [
+
+              "https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless-2020_3857/default/g/{z}/{y}/{x}.jpg"
+
+            ],
+
+            tileSize: 256
+
+          }
+
+        },
+
+        layers: [
+
+          {
+
+            id: "satellite",
+
+            type: "raster",
+
+            source: "satellite"
+
+          }
+
+        ]
+
+      }
 
     });
 
+
+    // ==============================
+    // CONTROLES
+    // ==============================
+
+    map.addControl(
+      new maplibregl.NavigationControl(),
+      "bottom-right"
+    );
+
+
+    // ==============================
+    // GPS
+    // ==============================
+
+    let gpsMarker = null;
+
+
+    document
+      .getElementById("gpsBtn")
+      .addEventListener("click", () => {
+
+
+        if (!navigator.geolocation) {
+
+          alert(
+            "La géolocalisation n'est pas disponible."
+          );
+
+          return;
+
+        }
+
+
+        navigator.geolocation.getCurrentPosition(
+
+          (position) => {
+
+            const longitude =
+              position.coords.longitude;
+
+            const latitude =
+              position.coords.latitude;
+
+
+            if (gpsMarker) {
+
+              gpsMarker.remove();
+
+            }
+
+
+            gpsMarker =
+              new maplibregl.Marker({
+                color: "#e00000"
+              })
+
+              .setLngLat([
+                longitude,
+                latitude
+              ])
+
+              .addTo(map);
+
+
+            map.flyTo({
+
+              center: [
+                longitude,
+                latitude
+              ],
+
+              zoom: 15
+
+            });
+
+          },
+
+
+          () => {
+
+            alert(
+              "Impossible d'obtenir la position GPS."
+            );
+
+          },
+
+
+          {
+
+            enableHighAccuracy: true,
+
+            timeout: 10000,
+
+            maximumAge: 0
+
+          }
+
+        );
+
+      });
+
+
+    // ==============================
+    // IMPORT GPX
+    // ==============================
+
+    document
+      .getElementById("gpxFile")
+      .addEventListener("change", () => {
+
+        alert(
+          "Import GPX : prochaine étape"
+        );
+
+      });
+
+
   </script>
 
+
 </body>
+
 </html>
