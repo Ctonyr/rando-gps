@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-  <title>Rando GPS</title>
+  <title>Test Rando GPS</title>
 
   <link
     href="https://unpkg.com/maplibre-gl@6.11.2/dist/maplibre-gl.css"
@@ -14,7 +14,6 @@
   <style>
     html, body {
       margin: 0;
-      padding: 0;
       width: 100%;
       height: 100%;
     }
@@ -24,172 +23,70 @@
       height: 100%;
     }
 
-    #menu {
+    #message {
       position: absolute;
+      z-index: 10;
       top: 10px;
       left: 10px;
-      z-index: 10;
-      display: flex;
-      gap: 8px;
-    }
-
-    button, label {
       background: white;
-      border: none;
+      padding: 12px;
       border-radius: 8px;
-      padding: 10px 14px;
-      font-size: 15px;
-      box-shadow: 0 2px 6px rgba(0,0,0,0.25);
-    }
-
-    input {
-      display: none;
     }
   </style>
 </head>
 
 <body>
 
-  <div id="menu">
+<div id="message">
+  Chargement de la carte...
+</div>
 
-    <button id="gpsBtn">
-      📍 Ma position
-    </button>
+<div id="map"></div>
 
-    <label for="gpxFile">
-      📂 Importer GPX
-    </label>
+<script src="https://unpkg.com/maplibre-gl@6.11.2/dist/maplibre-gl.js"></script>
 
-    <input
-      type="file"
-      id="gpxFile"
-      accept=".gpx"
-    >
+<script>
 
-  </div>
+  const map = new maplibregl.Map({
 
-  <div id="map"></div>
+    container: "map",
 
-  <script type="module">
+    style: {
+      version: 8,
 
-    import maplibregl from
-      "https://unpkg.com/maplibre-gl@6.11.2/dist/maplibre-gl.mjs";
-
-
-    const map = new maplibregl.Map({
-
-      container: "map",
-
-      style: {
-
-        version: 8,
-
-        sources: {
-
-          satellite: {
-
-            type: "raster",
-
-            tiles: [
-              "https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless-2020_3857/default/g/{z}/{y}/{x}.jpg"
-            ],
-
-            tileSize: 256
-          }
-
-        },
-
-        layers: [
-
-          {
-            id: "satellite",
-
-            type: "raster",
-
-            source: "satellite"
-          }
-
-        ]
-
+      sources: {
+        osm: {
+          type: "raster",
+          tiles: [
+            "https://tile.openstreetmap.org/{z}/{x}/{y}.png"
+          ],
+          tileSize: 256
+        }
       },
 
-      center: [2.5, 46.8],
+      layers: [
+        {
+          id: "osm",
+          type: "raster",
+          source: "osm"
+        }
+      ]
+    },
 
-      zoom: 5
+    center: [0.5, 46.5],
 
-    });
+    zoom: 6
 
+  });
 
-    map.addControl(
-      new maplibregl.NavigationControl(),
-      "bottom-right"
-    );
+  map.on("load", function() {
 
+    document.getElementById("message").textContent =
+      "✅ MapLibre fonctionne";
 
-    document
-      .getElementById("gpsBtn")
-      .addEventListener("click", () => {
+  });
 
-        navigator.geolocation.getCurrentPosition(
-
-          position => {
-
-            const lon =
-              position.coords.longitude;
-
-            const lat =
-              position.coords.latitude;
-
-
-            new maplibregl.Marker({
-              color: "#ff0000"
-            })
-
-              .setLngLat([lon, lat])
-
-              .addTo(map);
-
-
-            map.flyTo({
-
-              center: [lon, lat],
-
-              zoom: 15
-
-            });
-
-          },
-
-          error => {
-
-            alert(
-              "Impossible d'obtenir la position GPS."
-            );
-
-          },
-
-          {
-
-            enableHighAccuracy: true
-
-          }
-
-        );
-
-      });
-
-
-    // Le bouton GPX est présent,
-    // mais l'import sera ajouté ensuite.
-
-  </script>
+</script>
 
 </body>
 </html>
-<body>
-
-<div style="position:absolute;top:100px;left:10px;z-index:100;background:red;color:white;padding:15px;">
-TEST
-</div>
-
-<div id="menu">
