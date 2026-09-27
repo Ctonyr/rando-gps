@@ -17,8 +17,6 @@
       padding: 0;
       width: 100%;
       height: 100%;
-      overflow: hidden;
-      font-family: Arial, sans-serif;
     }
 
     #map {
@@ -30,40 +28,22 @@
       position: absolute;
       top: 10px;
       left: 10px;
-      right: 10px;
       z-index: 10;
       display: flex;
       gap: 8px;
-      flex-wrap: wrap;
     }
 
-    button,
-    label {
+    button, label {
       background: white;
       border: none;
       border-radius: 8px;
       padding: 10px 14px;
       font-size: 15px;
       box-shadow: 0 2px 6px rgba(0,0,0,0.25);
-      cursor: pointer;
     }
 
-    input[type="file"] {
+    input {
       display: none;
-    }
-
-    #status {
-      position: absolute;
-      bottom: 15px;
-      left: 15px;
-      right: 15px;
-      z-index: 10;
-      background: rgba(255,255,255,0.9);
-      border-radius: 8px;
-      padding: 10px;
-      text-align: center;
-      font-size: 14px;
-      box-shadow: 0 2px 6px rgba(0,0,0,0.2);
     }
   </style>
 </head>
@@ -71,7 +51,10 @@
 <body>
 
   <div id="menu">
-    <button id="gpsBtn">📍 Ma position</button>
+
+    <button id="gpsBtn">
+      📍 Ma position
+    </button>
 
     <label for="gpxFile">
       📂 Importer GPX
@@ -80,33 +63,31 @@
     <input
       type="file"
       id="gpxFile"
-      accept=".gpx,application/gpx+xml"
+      accept=".gpx"
     >
+
   </div>
 
   <div id="map"></div>
-
-  <div id="status">
-    Carte prête
-  </div>
 
   <script type="module">
 
     import maplibregl from
       "https://unpkg.com/maplibre-gl@6.11.2/dist/maplibre-gl.mjs";
 
-    // --------------------------------------------------
-    // CARTE
-    // --------------------------------------------------
 
     const map = new maplibregl.Map({
+
       container: "map",
 
       style: {
+
         version: 8,
 
         sources: {
+
           satellite: {
+
             type: "raster",
 
             tiles: [
@@ -115,20 +96,29 @@
 
             tileSize: 256
           }
+
         },
 
         layers: [
+
           {
             id: "satellite",
+
             type: "raster",
+
             source: "satellite"
           }
+
         ]
+
       },
 
       center: [2.5, 46.8],
+
       zoom: 5
+
     });
+
 
     map.addControl(
       new maplibregl.NavigationControl(),
@@ -136,295 +126,61 @@
     );
 
 
-    // --------------------------------------------------
-    // GPS
-    // --------------------------------------------------
-
-    let positionMarker = null;
-
     document
       .getElementById("gpsBtn")
       .addEventListener("click", () => {
 
-        if (!navigator.geolocation) {
-          alert("La géolocalisation n'est pas disponible.");
-          return;
-        }
-
-        document.getElementById("status").textContent =
-          "📍 Recherche de ta position...";
-
         navigator.geolocation.getCurrentPosition(
 
-          (position) => {
-
-            const longitude =
-              position.coords.longitude;
-
-            const latitude =
-              position.coords.latitude;
-
-            if (positionMarker) {
-              positionMarker.remove();
-            }
-
-            positionMarker = new maplibregl.Marker({
-              color: "#e00000"
-            })
-              .setLngLat([longitude, latitude])
-              .addTo(map);
-
-            map.flyTo({
-              center: [longitude, latitude],
-              zoom: 15
-            });
-
-            document.getElementById("status").textContent =
-              "📍 Position trouvée";
-          },
-
-          (error) => {
-
-            document.getElementById("status").textContent =
-              "❌ Impossible d'obtenir la position GPS.";
-
-            console.log(error);
-          },
-
-          {
-            enableHighAccuracy: true,
-            timeout: 10000,
-            maximumAge: 0
-          }
-        );
-      });
-
-
-    // --------------------------------------------------
-    // IMPORT GPX
-    // --------------------------------------------------
-
-    document
-      .getElementById("gpxFile")
-      .addEventListener("change", async (event) => {
-
-        const file = event.target.files[0];
-
-        if (!file) return;
-
-        try {
-
-          document.getElementById("status").textContent =
-            "📂 Lecture du GPX...";
-
-          const text = await file.text();
-
-          const parser = new DOMParser();
-
-          const xml = parser.parseFromString(
-            text,
-            "application/xml"
-          );
-
-          // Vérification basique
-          const parserError =
-            xml.querySelector("parsererror");
-
-          if (parserError) {
-            throw new Error("Fichier GPX invalide");
-          }
-
-
-          // ------------------------------------------------
-          // RÉCUPÉRATION DES POINTS DE TRACE
-          // ------------------------------------------------
-
-          const trackPoints =
-            Array.from(xml.querySelectorAll("trkpt"));
-
-          const coordinates = trackPoints
-            .map(point => {
-
-              const lat =
-                parseFloat(point.getAttribute("lat"));
-
-              const lon =
-                parseFloat(point.getAttribute("lon"));
-
-              return [lon, lat];
-
-            })
-            .filter(coord =>
-              Number.isFinite(coord[0]) &&
-              Number.isFinite(coord[1])
-            );
-
-
-          if (coordinates.length < 2) {
-            throw new Error(
-              "Aucune trace exploitable trouvée dans le GPX."
-            );
-          }
-
-
-          // ------------------------------------------------
-          // SUPPRESSION DE L'ANCIENNE TRACE
-          // ------------------------------------------------
-
-          if (map.getLayer("gpx-line")) {
-            map.removeLayer("gpx-line");
-          }
-
-          if (map.getSource("gpx")) {
-            map.removeSource("gpx");
-          }
-
-
-          // ------------------------------------------------
-          // CRÉATION DE LA TRACE
-          // ------------------------------------------------
-
-          map.addSource("gpx", {
-
-            type: "geojson",
-
-            data: {
-              type: "Feature",
-
-              geometry: {
-                type: "LineString",
-                coordinates: coordinates
-              },
-
-              properties: {}
-            }
-          });
-
-
-          map.addLayer({
-
-            id: "gpx-line",
-
-            type: "line",
-
-            source: "gpx",
-
-            paint: {
-
-              "line-color": "#ff0000",
-
-              "line-width": 5,
-
-              "line-opacity": 0.9
-            }
-          });
-
-
-          // ------------------------------------------------
-          // CALCUL DES LIMITES DE LA TRACE
-          // ------------------------------------------------
-
-          let minLon = coordinates[0][0];
-          let maxLon = coordinates[0][0];
-
-          let minLat = coordinates[0][1];
-          let maxLat = coordinates[0][1];
-
-
-          coordinates.forEach(coord => {
-
-            minLon = Math.min(minLon, coord[0]);
-            maxLon = Math.max(maxLon, coord[0]);
-
-            minLat = Math.min(minLat, coord[1]);
-            maxLat = Math.max(maxLat, coord[1]);
-
-          });
-
-
-          const bounds =
-            new maplibregl.LngLatBounds(
-              [minLon, minLat],
-              [maxLon, maxLat]
-            );
-
-
-          map.fitBounds(bounds, {
-
-            padding: 60,
-
-            duration: 1000
-
-          });
-
-
-          // ------------------------------------------------
-          // WAYPOINTS GPX
-          // ------------------------------------------------
-
-          const waypoints =
-            Array.from(xml.querySelectorAll("wpt"));
-
-          waypoints.forEach(wpt => {
-
-            const lat =
-              parseFloat(wpt.getAttribute("lat"));
+          position => {
 
             const lon =
-              parseFloat(wpt.getAttribute("lon"));
+              position.coords.longitude;
 
-            const nameElement =
-              wpt.querySelector("name");
-
-            const name =
-              nameElement
-                ? nameElement.textContent
-                : "Waypoint";
-
-
-            if (
-              !Number.isFinite(lat) ||
-              !Number.isFinite(lon)
-            ) {
-              return;
-            }
+            const lat =
+              position.coords.latitude;
 
 
             new maplibregl.Marker({
-              color: "#0066ff"
+              color: "#ff0000"
             })
 
               .setLngLat([lon, lat])
 
-              .setPopup(
-                new maplibregl.Popup({
-                  offset: 25
-                }).setText(name)
-              )
-
               .addTo(map);
 
-          });
 
+            map.flyTo({
 
-          document.getElementById("status").textContent =
-            `✅ GPX chargé : ${coordinates.length} points` +
-            ` | ${waypoints.length} waypoint(s)`;
+              center: [lon, lat],
 
+              zoom: 15
 
-        } catch (error) {
+            });
 
-          console.error(error);
+          },
 
-          document.getElementById("status").textContent =
-            "❌ Erreur lors de la lecture du GPX.";
+          error => {
 
-          alert(
-            "Impossible de lire ce fichier GPX."
-          );
-        }
+            alert(
+              "Impossible d'obtenir la position GPS."
+            );
+
+          },
+
+          {
+
+            enableHighAccuracy: true
+
+          }
+
+        );
 
       });
+
+
+    // Le bouton GPX est présent,
+    // mais l'import sera ajouté ensuite.
 
   </script>
 
