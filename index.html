@@ -1,285 +1,314 @@
 <!DOCTYPE html>
 <html lang="fr">
-
 <head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-    <meta charset="UTF-8">
+  <title>Rando GPS</title>
 
-    <meta name="viewport"
-          content="width=device-width, initial-scale=1.0">
+  <link
+    href="https://unpkg.com/maplibre-gl@6.11.2/dist/maplibre-gl.css"
+    rel="stylesheet"
+  >
 
-    <title>Rando GPS</title>
+  <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      font-family: Arial, sans-serif;
+    }
 
-    <!-- MapLibre -->
-    <link
-        rel="stylesheet"
-        href="https://unpkg.com/maplibre-gl@6.11.2/dist/maplibre-gl.css"
-    >
+    #map {
+      width: 100%;
+      height: 100%;
+    }
 
-    <style>
+    #menu {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      right: 10px;
+      z-index: 10;
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
 
-        html,
-        body {
-            margin: 0;
-            padding: 0;
-            width: 100%;
-            height: 100%;
-            overflow: hidden;
-        }
+    button,
+    label {
+      background: white;
+      border: none;
+      border-radius: 8px;
+      padding: 10px 14px;
+      font-size: 15px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.25);
+      cursor: pointer;
+    }
 
-        #map {
-            width: 100%;
-            height: 100%;
-        }
+    input[type="file"] {
+      display: none;
+    }
 
-        /* Barre supérieure */
-
-        #topbar {
-
-            position: absolute;
-
-            top: 10px;
-            left: 10px;
-            right: 10px;
-
-            height: 50px;
-
-            background: rgba(0,0,0,0.75);
-
-            color: white;
-
-            display: flex;
-
-            align-items: center;
-
-            justify-content: center;
-
-            border-radius: 12px;
-
-            z-index: 10;
-
-            font-family: Arial, sans-serif;
-
-            font-size: 20px;
-
-            font-weight: bold;
-
-            box-shadow:
-                0 2px 8px rgba(0,0,0,0.4);
-        }
-
-        /* Bouton GPS */
-
-        #gpsButton {
-
-            position: absolute;
-
-            right: 15px;
-            bottom: 25px;
-
-            width: 55px;
-            height: 55px;
-
-            border: none;
-
-            border-radius: 50%;
-
-            background: white;
-
-            font-size: 25px;
-
-            box-shadow:
-                0 2px 8px rgba(0,0,0,0.4);
-
-            z-index: 10;
-        }
-
-    </style>
-
+    #status {
+      position: absolute;
+      bottom: 15px;
+      left: 15px;
+      right: 15px;
+      z-index: 10;
+      background: rgba(255,255,255,0.9);
+      border-radius: 8px;
+      padding: 10px;
+      text-align: center;
+      font-size: 14px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+    }
+  </style>
 </head>
-
 
 <body>
 
-    <div id="map"></div>
+  <div id="menu">
+    <button id="gpsBtn">📍 Ma position</button>
 
-    <div id="topbar">
-        🗺️ Rando GPS
-    </div>
+    <label for="gpxFile">
+      📂 Importer GPX
+    </label>
 
-    <button id="gpsButton">
-        📍
-    </button>
+    <input
+      type="file"
+      id="gpxFile"
+      accept=".gpx,application/gpx+xml"
+    >
+  </div>
+
+  <div id="map"></div>
+
+  <div id="status">
+    Carte prête
+  </div>
+
+  <script type="module">
+
+    import maplibregl from
+      "https://unpkg.com/maplibre-gl@6.11.2/dist/maplibre-gl.mjs";
+
+    // --------------------------------------------------
+    // CARTE
+    // --------------------------------------------------
+
+    const map = new maplibregl.Map({
+      container: "map",
+
+      style: {
+        version: 8,
+
+        sources: {
+          satellite: {
+            type: "raster",
+
+            tiles: [
+              "https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless-2020_3857/default/g/{z}/{y}/{x}.jpg"
+            ],
+
+            tileSize: 256
+          }
+        },
+
+        layers: [
+          {
+            id: "satellite",
+            type: "raster",
+            source: "satellite"
+          }
+        ]
+      },
+
+      center: [2.5, 46.8],
+      zoom: 5
+    });
+
+    map.addControl(
+      new maplibregl.NavigationControl(),
+      "bottom-right"
+    );
 
 
-    <!-- MapLibre -->
+    // --------------------------------------------------
+    // GPS
+    // --------------------------------------------------
 
-    <script type="module">
+    let positionMarker = null;
 
-        import * as maplibregl
-            from "https://unpkg.com/maplibre-gl@6.11.2/dist/maplibre-gl.mjs";
+    document
+      .getElementById("gpsBtn")
+      .addEventListener("click", () => {
 
+        if (!navigator.geolocation) {
+          alert("La géolocalisation n'est pas disponible.");
+          return;
+        }
 
-        /*
-         * Création de la carte
-         */
+        document.getElementById("status").textContent =
+          "📍 Recherche de ta position...";
 
-        const map = new maplibregl.Map({
+        navigator.geolocation.getCurrentPosition(
 
-            container: "map",
+          (position) => {
 
-            center: [2.5, 46.8],
+            const longitude =
+              position.coords.longitude;
 
-            zoom: 5,
+            const latitude =
+              position.coords.latitude;
 
-            style: {
-
-                version: 8,
-
-                sources: {
-
-                    satellite: {
-
-                        type: "raster",
-
-                        tiles: [
-
-                            "https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless-2020_3857/default/g/{z}/{y}/{x}.jpg"
-
-                        ],
-
-                        tileSize: 256
-
-                    }
-
-                },
-
-                layers: [
-
-                    {
-
-                        id: "satellite",
-
-                        type: "raster",
-
-                        source: "satellite"
-
-                    }
-
-                ]
-
+            if (positionMarker) {
+              positionMarker.remove();
             }
 
-        });
+            positionMarker = new maplibregl.Marker({
+              color: "#e00000"
+            })
+              .setLngLat([longitude, latitude])
+              .addTo(map);
 
+            map.flyTo({
+              center: [longitude, latitude],
+              zoom: 15
+            });
 
-        /*
-         * Contrôles de navigation
-         */
+            document.getElementById("status").textContent =
+              "📍 Position trouvée";
+          },
 
-        map.addControl(
+          (error) => {
 
-            new maplibregl.NavigationControl(),
+            document.getElementById("status").textContent =
+              "❌ Impossible d'obtenir la position GPS.";
 
-            "top-right"
+            console.log(error);
+          },
 
+          {
+            enableHighAccuracy: true,
+            timeout: 10000,
+            maximumAge: 0
+          }
         );
+      });
 
 
-        /*
-         * Bouton GPS
-         */
+    // --------------------------------------------------
+    // IMPORT GPX
+    // --------------------------------------------------
 
-        const gpsButton =
-            document.getElementById("gpsButton");
+    document
+      .getElementById("gpxFile")
+      .addEventListener("change", async (event) => {
 
+        const file = event.target.files[0];
 
-        gpsButton.addEventListener(
-            "click",
-            () => {
+        if (!file) return;
 
-                if (!navigator.geolocation) {
+        try {
 
-                    alert(
-                        "La géolocalisation n'est pas disponible."
-                    );
+          document.getElementById("status").textContent =
+            "📂 Lecture du GPX...";
 
-                    return;
+          const text = await file.text();
 
-                }
+          const parser = new DOMParser();
 
+          const xml = parser.parseFromString(
+            text,
+            "application/xml"
+          );
 
-                navigator.geolocation.getCurrentPosition(
+          // Vérification basique
+          const parserError =
+            xml.querySelector("parsererror");
 
-                    (position) => {
-
-                        const longitude =
-                            position.coords.longitude;
-
-                        const latitude =
-                            position.coords.latitude;
-
-
-                        /*
-                         * Position actuelle
-                         */
-
-                        new maplibregl.Marker({
-                            color: "#e53935"
-                        })
-
-                        .setLngLat([
-                            longitude,
-                            latitude
-                        ])
-
-                        .addTo(map);
+          if (parserError) {
+            throw new Error("Fichier GPX invalide");
+          }
 
 
-                        /*
-                         * Centrer la carte
-                         */
+          // ------------------------------------------------
+          // RÉCUPÉRATION DES POINTS DE TRACE
+          // ------------------------------------------------
 
-                        map.flyTo({
+          const trackPoints =
+            Array.from(xml.querySelectorAll("trkpt"));
 
-                            center: [
-                                longitude,
-                                latitude
-                            ],
+          const coordinates = trackPoints
+            .map(point => {
 
-                            zoom: 15
+              const lat =
+                parseFloat(point.getAttribute("lat"));
 
-                        });
+              const lon =
+                parseFloat(point.getAttribute("lon"));
 
-                    },
+              return [lon, lat];
+
+            })
+            .filter(coord =>
+              Number.isFinite(coord[0]) &&
+              Number.isFinite(coord[1])
+            );
 
 
-                    () => {
+          if (coordinates.length < 2) {
+            throw new Error(
+              "Aucune trace exploitable trouvée dans le GPX."
+            );
+          }
 
-                        alert(
-                            "Impossible d'obtenir votre position GPS."
-                        );
 
-                    },
+          // ------------------------------------------------
+          // SUPPRESSION DE L'ANCIENNE TRACE
+          // ------------------------------------------------
 
-                    {
+          if (map.getLayer("gpx-line")) {
+            map.removeLayer("gpx-line");
+          }
 
-                        enableHighAccuracy: true,
+          if (map.getSource("gpx")) {
+            map.removeSource("gpx");
+          }
 
-                        timeout: 10000,
 
-                        maximumAge: 5000
+          // ------------------------------------------------
+          // CRÉATION DE LA TRACE
+          // ------------------------------------------------
 
-                    }
+          map.addSource("gpx", {
 
-                );
+            type: "geojson",
 
+            data: {
+              type: "Feature",
+
+              geometry: {
+                type: "LineString",
+                coordinates: coordinates
+              },
+
+              properties: {}
             }
+          });
 
-        );
 
-    </script>
+          map.addLayer({
 
-</body>
+            id: "gpx-line",
 
-</html>
+            type: "line",
+
+            source: "gpx",
+
+            paint: {
+
+              "line-color": "#ff000
