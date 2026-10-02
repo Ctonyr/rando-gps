@@ -92,37 +92,61 @@ document.getElementById("traccarBtn").onclick=()=>{
 document.getElementById("cancelBtn").onclick=()=>{
  document.getElementById("login").style.display="none";
 };
+const WORKER_URL = "https://capredgps.anthonycrivron.workers.dev";
 
 async function api(path){
- const response=await fetch("https://demo.traccar.org/api"+path,{
-  headers:{"Authorization":"Basic "+traccarAuth},
-  credentials:"omit"
- });
- if(!response.ok)throw new Error("API Traccar : erreur HTTP "+response.status);
+ const response = await fetch(WORKER_URL + path);
+
+ if(!response.ok){
+  throw new Error("Worker Traccar : erreur HTTP "+response.status);
+ }
+
  return await response.json();
 }
+async function connectTraccar(){
 
-document.getElementById("connectBtn").onclick=async()=>{
- const email=document.getElementById("email").value.trim();
- const password=document.getElementById("password").value;
- if(!email||!password){alert("Renseigne ton e-mail et ton mot de passe.");return;}
- traccarAuth=btoa(unescape(encodeURIComponent(email+":"+password)));
- document.getElementById("password").value="";
- document.getElementById("login").style.display="none";
- setStatus("🔄 Connexion au serveur Traccar...");
+ setStatus("🔄 Connexion à Traccar...");
+
  try{
+
   traccarDevices=await api("/devices");
-  if(!Array.isArray(traccarDevices))throw new Error("Réponse Traccar inattendue");
+
+  if(!Array.isArray(traccarDevices)){
+   throw new Error("Réponse Traccar inattendue");
+  }
+
   await updatePositions();
-  if(refreshTimer)clearInterval(refreshTimer);
+
+  if(refreshTimer){
+   clearInterval(refreshTimer);
+  }
+
   refreshTimer=setInterval(updatePositions,15000);
-  setStatus("✅ Traccar connecté : "+traccarDevices.length+" appareil(s). Actualisation toutes les 15 secondes.");
+
+  setStatus(
+   "✅ Traccar connecté : "+
+   traccarDevices.length+
+   " appareil(s). Actualisation toutes les 15 secondes."
+  );
+
  }catch(error){
+
   console.error(error);
-  traccarAuth=null;
-  setStatus("❌ Connexion impossible. Vérifie les identifiants ou les autorisations du navigateur.");
-  alert("Connexion impossible à Traccar.\n\n"+error.message+"\n\nSi les identifiants sont corrects, le navigateur peut bloquer la requête (CORS).");
+
+  setStatus(
+   "❌ Impossible de récupérer les appareils Traccar."
+  );
+
+  alert(
+   "Connexion impossible à Traccar.\n\n"+
+   error.message
+  );
  }
+}
+
+document.getElementById("traccarBtn").onclick=connectTraccar;
+
+
 };
 
 async function updatePositions(){
