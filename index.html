@@ -147,7 +147,6 @@ async function connectTraccar(){
 document.getElementById("traccarBtn").onclick=connectTraccar;
 
 async function updatePositions(){
- if(!traccarAuth)return;
  try{
   const positions=await api("/positions");
   for(const device of traccarDevices){
